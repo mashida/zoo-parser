@@ -146,8 +146,7 @@ class Parser:
 
     def parse_cards(self):
         # parse pages
-        # for i in range(1, self.amount_of_pages + 1):
-        for i in range(1, 1 + 1):
+        for i in range(1, self.amount_of_pages + 1):
             soup = self.get_page(i)
 
             # Запрос CSS-селектора для поиска карточек на странице
