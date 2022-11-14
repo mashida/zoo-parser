@@ -43,12 +43,15 @@ class Parser:
 
     def __init__(self):
         self.session = requests.Session()
-        self.settings = Settings()
-        self.out_dir = Path(self.settings.output_directory)
         self.top = ""
         self.amount_of_pages: int = 0
-        self.setup_session()
         self.categories_are_parsed: bool = False
+
+    def set_settings(self, settings: Settings):
+        self.settings = settings
+
+    def set_log_and_output_dirs(self):
+        self.out_dir = Path(self.settings.output_directory)
 
     def setup_session(self):
         retry_strategy = Retry(
@@ -146,7 +149,8 @@ class Parser:
 
     def parse_cards(self):
         # parse pages
-        for i in range(1, self.amount_of_pages + 1):
+        # for i in range(1, self.amount_of_pages + 1):
+        for i in range(1, 2):
             soup = self.get_page(i)
 
             # Запрос CSS-селектора для поиска карточек на странице
@@ -234,7 +238,7 @@ class Parser:
                 self.parse_cards()
                 break
             except BaseException as e:
-                logger.error('Error occured: {e}')
+                logger.error(f'Error occurred: {e}')
                 sleep(self.settings.restart['interval_m'] * 60)
                 continue
 
@@ -310,8 +314,22 @@ def get_pictures(picture_wrapper) -> str:
     return ', '.join(links)
 
 
+def set_logging_file(parser: Parser, settings: Settings):
+    log_file_dir = Path(parser.settings.logs_dir)
+    log_file_dir.mkdir(exist_ok=True)
+    logfile_name = f'log-{datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log'
+    fh = logging.FileHandler(filename=Path(settings.logs_dir) / logfile_name, mode='a', encoding='utf-8')
+    fh.setLevel(logging.DEBUG)
+    logger.addHandler(fh)
+
+
 def main():
+    settings = Settings()
     parser = Parser()
+    parser.set_settings(settings=settings)
+    parser.set_log_and_output_dirs()
+    set_logging_file(parser=parser, settings=settings)
+    parser.setup_session()
     parser.work()
     parser.csv_write()
 
