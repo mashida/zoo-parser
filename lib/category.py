@@ -1,5 +1,4 @@
-from random import uniform
-from time import sleep
+import logging
 
 import requests
 from bs4 import BeautifulSoup
@@ -52,11 +51,18 @@ class Category:
 
     def print_with_children(self):
         if self.stage != 0:
-            print(self)
+            logging.debug(self)
         for _child in self.children.values():
             _child.print_with_children()
 
     def add_children(self):
+        # now we'll look down to the category link in order to create its tree
+        # each category consists of 4 elements: top-category, category, brand, sub-category
+        # example
+        # tovary-i-korma-dlya-sobak - top category
+        # tovary-i-korma-dlya-sobak/korm-sukhoy/ - this is a category
+        # tovary-i-korma-dlya-sobak/korm-sukhoy/advance_1 - brand
+        # tovary-i-korma-dlya-sobak/korm-sukhoy/advance_1/shchenki_1/ - sub-category
         if STAGES[self.stage]['stop']:
             return
         if self.stage in [0, 1]:
