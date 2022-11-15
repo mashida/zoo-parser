@@ -1,5 +1,4 @@
 import logging
-# from collections import namedtuple
 from pathlib import Path
 from random import uniform
 from time import sleep
@@ -12,6 +11,7 @@ from urllib3 import Retry
 from lib.settings import Settings
 from lib.helper import tags
 from lib.category import Category
+from lib.product import Product
 
 ZOO_URL = 'https://zootovary.ru'
 CATALOG = '/catalog/'
@@ -30,7 +30,11 @@ class Parser:
         self.out_dir = Path('out')
         self.logs_dir = Path('logs')
         self.max_retries = 0
-        self.categories = []
+        self.required_categories_list = []
+        self.required_categories_provided: bool = False
+        self.products_list_by_category: dict[str, list] = {}
+        self.parsed_articles_list: list[str] = []
+        self.parsed_barcodes_list: list[str] = []
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/104.0.5112.124 YaBrowser/22.9.5.710 Yowser/2.5 Safari/537.36",
@@ -42,8 +46,8 @@ class Parser:
             "interval_m": 0.2
         }
         # list of all categories parsed
-        self.category_list: Category = Category()
-        self.required_categories: list[Category] = []
+        self.all_categories_parsed_tree: Category = Category()
+        self.required_categories_parsed_list: list[Category] = []
         #
         self.apply_config(settings=settings)
 
@@ -53,11 +57,11 @@ class Parser:
         self.out_dir = Path(settings.output_directory)
         self.logs_dir = settings.logs_dir
         self.max_retries = settings.max_retries
-        self.categories = settings.categories
         self.headers = settings.headers
         self.delay_range = settings.delay_range
         self.restart = settings.restart
-        self.categories = [CATALOG] if len(settings.categories) == 0 else settings.categories
+        self.required_categories_list = [CATALOG] if len(settings.categories) == 0 else settings.categories
+        self.required_categories_provided = True if len(settings.categories) > 0 else False
 
     def setup_session(self) -> None:
         retry_strategy = Retry(
@@ -101,38 +105,74 @@ class Parser:
                     self.amount_of_pages[catalog_url] = int(splits[len(splits) - 1])
             else:
                 self.amount_of_pages[catalog_url] = int(len(navigation_links))
-        logging.info(f'We found {self.amount_of_pages[catalog_url]} pages and {count_products} products '
+        logging.info(f'        We found {self.amount_of_pages[catalog_url]} pages and {count_products} products '
                      f'on a first page of category: {catalog_url}')
 
     def parse_all_categories(self):
+        logging.info('Parsing all categories..')
         if self.all_categories_are_parsed:
             logging.warning(f'Categories have been parsed already. Skipping...')
             return
 
-        # now we'll look down to the category link in order to create its tree
-        # each category consists of 4 elements: top-category, category, brand, sub-category
-        # example
-        # tovary-i-korma-dlya-sobak - top category
-        # tovary-i-korma-dlya-sobak/korm-sukhoy/ - this is a category
-        # tovary-i-korma-dlya-sobak/korm-sukhoy/advance_1 - brand
-        # tovary-i-korma-dlya-sobak/korm-sukhoy/advance_1/shchenki_1/ - sub-category
-
-        self.category_list = Category(url=ZOO_URL + CATALOG, base_url=ZOO_URL, link=CATALOG, code=0, stage=0)
+        self.all_categories_parsed_tree = Category(url=ZOO_URL + CATALOG, base_url=ZOO_URL, link=CATALOG, code=0,
+                                                   stage=0)
         self.all_categories_are_parsed = True
+        logging.info('Done | all categories passed')
 
     def parse_category_out_of_url(self, category_url: str):
-        self.required_categories.append(self.category_list.get_by_link(link=category_url, stage=1))
+        logging.info(f'    Parsing {category_url} category out of url')
+        if self.required_categories_provided:
+            self.required_categories_parsed_list.append(
+                self.all_categories_parsed_tree.get_by_link(link=category_url, stage=1))
+        logging.info(f'    Done')
+
+    @staticmethod
+    def parse_block(item):
+        data = item.select_one('a.name')
+        return [data['href'], data['title']]
+
+    def get_all_products_links_out_of_category(self, soup: str = None, catalog_url: str = None):
+        if self.amount_of_pages[catalog_url] == 0:
+            self.products_list_by_category[catalog_url] = []
+            return
+        for page in range(1, self.amount_of_pages[catalog_url] + 1):
+            catalog_info = soup.select('div.catalog-content-info')
+            for item in catalog_info:
+                product = Product(*self.parse_block(item=item))
+                if catalog_url not in self.products_list_by_category.keys():
+                    self.products_list_by_category[catalog_url] = []
+                self.products_list_by_category[catalog_url].append(product)
+        logging.info(f'        We have found {len(self.products_list_by_category[catalog_url])} products to parse')
+
+    def parse_all_products_out_of_category(self, catalog_url: str = None):
+        logging.info(f'        Starting to parse products of {catalog_url} category')
+        for product in self.products_list_by_category[catalog_url]:
+            if product.parsed:
+                logging.warning(f"We already parsed this product: [{product['title']}|{product['href']}]")
+                continue
+            product.parse(articles=self.parsed_articles_list, barcodes=self.parsed_barcodes_list)
+        logging.info(f'        Done | Products from {catalog_url} have been parsed')
+
+    def parse_cards(self, catalog_url):
+        logging.info(f'      Parsing cards out of {catalog_url}')
+        soup = self.get_soup_out_of_page_with_url(ZOO_URL + catalog_url, params={'pc': 50, 'v': 'filling'})
+        self.calc_amount_of_pages(soup=soup, catalog_url=catalog_url)
+        # let's get links of all products in this category
+        self.get_all_products_links_out_of_category(soup=soup, catalog_url=catalog_url)
+        # let's parse all products we have within this category
+        self.parse_all_products_out_of_category(catalog_url=catalog_url)
 
     def work(self):
         for _ in range(self.restart['restart_count']):
             try:
                 self.parse_all_categories()
-                for url in self.categories:
+                logging.info(f'We have {len(self.required_categories_list)} categories to parse..')
+                for url in self.required_categories_list:
+                    logging.info(f'  Parsing {url} category')
                     self.parse_category_out_of_url(url)
-                    # self.parse_categories_out_of_url(catalog_url=url)
-                    # self.parse_cards(url, self.categories.index(url) + 1)
+                    self.parse_cards(url)
+                    logging.info(f'  Done | Category {url} parsed')
                 break
             except BaseException as e:
                 logging.error(f'Error occurred: {e}')
                 sleep(self.restart['interval_m'] * 60)
-                continue
