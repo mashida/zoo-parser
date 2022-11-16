@@ -88,7 +88,7 @@ class Product:
         self.categories: str = ''
         self.pictures: str = ''
 
-    def parse(self, articles: list[str], barcodes: list[int]):
+    def parse(self, articles: list[str], barcodes: list[int], index: str = ""):
         # get the soup from link of the product
         soup = get_page_with_url(ZOO_URL + self.href)
         element = soup.find('div', {'id': 'comp_d68034d8231659a2cf5539cfbbbd3945'})
@@ -129,8 +129,8 @@ class Product:
         pictures_wrapper = element.find_all('div', 'catalog-element-small-picture')
         self.pictures = get_pictures(pictures_wrapper)
         self.parsed = True
-        logger.info(self.first_line)
-        logger.info(self.second_line)
+        logger.info(f'{index} {self.first_line}')
+        logger.info(f'{" " * len(index)} {self.second_line}')
 
     @property
     def to_csv(self):

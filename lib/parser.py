@@ -120,7 +120,8 @@ class Parser:
         logger.info('Done | all categories passed')
 
     def parse_category_out_of_url(self, category_url: str):
-        logger.info(f'    Parsing {category_url} category out of url')
+        index = self.required_categories_list.index(category_url) + 1
+        logger.info(f'    {index}/{len(self.required_categories_list)} Parsing {category_url} category out of url')
         if self.required_categories_provided:
             self.required_categories_parsed_list.append(
                 self.all_categories_parsed_tree.get_by_link(link=category_url, stage=1))
@@ -148,11 +149,12 @@ class Parser:
 
     def parse_all_products_out_of_category(self, catalog_url: str = None):
         logger.info(f'        Starting to parse products of {catalog_url} category')
-        for product in self.products_list_by_category[catalog_url]:
+        for index, product in enumerate(self.products_list_by_category[catalog_url], start=1):
             if product.parsed:
                 logger.warning(f"We already parsed this product: [{product['title']}|{product['href']}]")
                 continue
-            product.parse(articles=self.parsed_articles_list, barcodes=self.parsed_barcodes_list)
+            index = f'{index}/{len(self.products_list_by_category[catalog_url])}'
+            product.parse(articles=self.parsed_articles_list, barcodes=self.parsed_barcodes_list, index=index)
         logger.info(f'        Done | Products from {catalog_url} have been parsed')
 
     def parse_cards(self, catalog_url):
@@ -205,10 +207,11 @@ class Parser:
                     self.parse_cards(url)
                     logger.info(f'  Done | Category {url} parsed')
                 break
+            except KeyboardInterrupt as e:
+                logger.error('Stopping by keyboard interruption.')
+                break
             except BaseException as e:
                 logger.error(f'Error occurred: {e}')
                 sleep(self.restart['interval_m'] * 60)
 
-            except KeyboardInterrupt as e:
-                logger.error('Stopping by keyboard interruption.')
-                break
+
