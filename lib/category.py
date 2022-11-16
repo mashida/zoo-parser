@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 
 import requests
 from bs4 import BeautifulSoup
@@ -51,9 +51,27 @@ class Category:
 
     def print_with_children(self):
         if self.stage != 0:
-            logging.debug(self)
+            logger.info(self)
         for _child in self.children.values():
             _child.print_with_children()
+
+    def get_children_to_csv(self):
+        if self.stage != 0:
+            yield tuple([self.title, self.code, self.parent_id, self.link])
+        for _child in self.children.values():
+            _child.get_children_to_csv()
+
+    def titles(self):
+        return tuple([self.title, self.code, self.parent_id, self.link])
+
+    def list_of_children(self, list_: list = None):
+        if list_ is None:
+            list_ = []
+        if self.stage != 0:
+            list_.append(self.titles())
+        for _child in self.children.values():
+            _child.list_of_children(list_=list_)
+        return list_
 
     def add_children(self):
         # now we'll look down to the category link in order to create its tree
@@ -87,7 +105,7 @@ class Category:
         if link in self.children.keys():
             return self.children[link]
         else:
-            partial_link = f'/{"/".join(parts[0:stage+1])}/'
+            partial_link = f'/{"/".join(parts[0:stage + 1])}/'
             return self.children[partial_link].get_by_link(link, stage + 1)
 
 
@@ -95,7 +113,15 @@ if __name__ == "__main__":
     ZOO_URL = 'https://zootovary.ru'
     CATALOG = '/catalog/'
     top = Category(url=ZOO_URL + CATALOG, base_url=ZOO_URL, link=CATALOG, code=0, stage=0)
-    top.print_with_children()
-    category = top.get_by_link('/catalog/tovary-i-korma-dlya-reptiliy/', 1)
-    print('*' * 30)
-    category.print_with_children()
+    # top.print_with_children()
+    temp = top.list_of_children()
+    print(f'total amount of categories are: {len(temp)}')
+    links = [
+        "/catalog/tovary-i-korma-dlya-khorkov/aksessuary/",
+        "/catalog/tovary-i-korma-dlya-sobak/korm-sukhoy/",
+        "/catalog/tovary-i-korma-dlya-khorkov/korm/"
+    ]
+    for link in links:
+        category1 = top.get_by_link(link, 1)
+        temp1 = category1.list_of_children()
+        print(f'total amount in {link} is {len(temp1)}')

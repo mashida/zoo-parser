@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from datetime import datetime
 
 import requests
@@ -74,6 +74,7 @@ class Product:
         self.href = href
         self.title = title
         self.parsed = parsed
+        self.price_datetime: str = ''
         self.sku_article: str = ''
         self.sku_barcode: int = 0
         self.min_value: str = ''
@@ -91,7 +92,7 @@ class Product:
         # get the soup from link of the product
         soup = get_page_with_url(ZOO_URL + self.href)
         element = soup.find('div', {'id': 'comp_d68034d8231659a2cf5539cfbbbd3945'})
-        price_datetime = datetime.now()
+        self.price_datetime = datetime.now()
         price_content = element.find('tr', 'b-catalog-element-offer')
         items = [x for x in tags(price_content)]
         # get article
@@ -102,7 +103,7 @@ class Product:
         # logger.info(f'Штрих код: {sku_barcode}')
         # if we already have this article or barcode - we skip this good
         if self.sku_article in articles or self.sku_barcode in barcodes:
-            logging.error(f'we have saved item with article {self.sku_article} or barcode {self.sku_barcode}')
+            logger.error(f'we have saved item with article {self.sku_article} or barcode {self.sku_barcode}')
             return
 
         articles.append(self.sku_article)
@@ -128,11 +129,27 @@ class Product:
         pictures_wrapper = element.find_all('div', 'catalog-element-small-picture')
         self.pictures = get_pictures(pictures_wrapper)
         self.parsed = True
-        logging.info(self)
+        logger.info(self.first_line)
+        logger.info(self.second_line)
+
+    @property
+    def to_csv(self):
+        return tuple([self.price_datetime, self.price, self.promo_price, self.status, self.sku_barcode,
+                      self.sku_article, self.title, self.categories, self.country, self.sku_weight_min,
+                      self.sku_volume_min, self.sku_quantity_min, self.href, self.pictures])
 
     def __str__(self):
         return f'{self.categories} | {self.title}\n' \
                f'status: {self.status} | country: {self.country} | article: {self.sku_article} | ' \
+               f'barcode: {self.sku_barcode} | price: {self.price} | promo_price: {self.promo_price}'
+
+    @property
+    def first_line(self):
+        return f'{self.categories} | {self.title}'
+
+    @property
+    def second_line(self):
+        return f'status: {self.status} | country: {self.country} | article: {self.sku_article} | ' \
                f'barcode: {self.sku_barcode} | price: {self.price} | promo_price: {self.promo_price}'
 
 
