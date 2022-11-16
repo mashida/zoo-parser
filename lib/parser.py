@@ -102,7 +102,9 @@ class Parser:
                 if navi.getText() == '»':
                     href = navi['href']
                     splits = href.split('=')
-                    self.amount_of_pages[catalog_url] = int(splits[len(splits) - 1])
+                    pages = int(splits[-1])
+                    self.amount_of_pages[catalog_url] = pages
+                    break
             else:
                 self.amount_of_pages[catalog_url] = len([x for x in tags(navigation_links)])
         logger.info(f'        We found {self.amount_of_pages[catalog_url]} pages and {count_products} products '
@@ -136,7 +138,9 @@ class Parser:
         if self.amount_of_pages[catalog_url] == 0:
             self.products_list_by_category[catalog_url] = []
             return
+
         for page in range(1, self.amount_of_pages[catalog_url] + 1):
+            logger.info(f'         Analysing {page} page out of {self.amount_of_pages[catalog_url]}')
             params = {'pc': 50, 'v': 'filling', 'PAGEN_1': page}
             soup = self.get_soup_out_of_page_with_url(ZOO_URL + catalog_url, params=params)
             catalog_info = soup.select('div.catalog-content-info')
