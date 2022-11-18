@@ -4,3 +4,4 @@
 /.idea/
 /out/goods.csv
 /logs/
+__pycache__/
