@@ -1,6 +1,6 @@
 {
   "output_directory": "out",
-  "categories": "",
+  "categories": [],
   "delay_range": [0, 0],
   "max_retries": 0,
   "headers": {
