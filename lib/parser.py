@@ -30,7 +30,7 @@ class Parser:
         self.out_dir = Path('out')
         self.logs_dir = Path('logs')
         self.max_retries = 0
-        self.required_categories_list = []
+        self.required_categories_list = [CATALOG]
         self.required_categories_provided: bool = False
         self.products_list_by_category: dict[str, list] = {}
         self.parsed_articles_list: list[str] = []
@@ -60,7 +60,8 @@ class Parser:
         self.headers = settings.headers
         self.delay_range = settings.delay_range
         self.restart = settings.restart
-        self.required_categories_list = [CATALOG] if len(settings.categories) == 0 else settings.categories
+        if len(settings.categories) > 0:
+            self.required_categories_list = settings.categories
         self.required_categories_provided = True if len(settings.categories) > 0 else False
 
     def setup_session(self) -> None:
