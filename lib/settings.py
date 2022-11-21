@@ -3,6 +3,7 @@ import logging
 import sys
 
 logger = logging.getLogger('main2.settings')
+DEFAULT_CONFIG = 'config.json'
 
 
 class Settings:
@@ -19,16 +20,12 @@ class Settings:
 
     def __init__(self):
         try:
-            if len(sys.argv) > 1:
-                config = sys.argv[1]
-                settings = json.load(open(config, 'r'))
+            config = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CONFIG
+            settings = json.load(open(config, 'r'))
 
-                for key, value in settings.items():
-                    setattr(self, key, value)
-                self.provided = True
-            else:
-                logger.info(f'No config file provided, using default values...')
-                self.provided = False
+            for key, value in settings.items():
+                setattr(self, key, value)
+            self.provided = True
 
         except FileNotFoundError as e:
             logger.error('Config argument found, but no such file found. Exception: ', e)
