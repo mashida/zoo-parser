@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from loguru import logger
 from datetime import datetime
 
@@ -8,6 +10,9 @@ from lib.helper import tags
 
 ZOO_URL = 'https://zootovary.ru'
 CATALOG = '/catalog/'
+
+Offer = namedtuple('Offer', 'sku_article, sku_barcode, min_value, sku_weight_min, sku_volume_min, sku_quantity_min,'
+                            'price, promo_price, status')
 
 
 def get_page_with_url(url: str):
@@ -75,15 +80,7 @@ class Product:
         self.title = title
         self.parsed = parsed
         self.price_datetime: str = ''
-        self.sku_article: str = ''
-        self.sku_barcode: int = 0
-        self.min_value: str = ''
-        self.sku_weight_min: str = ''
-        self.sku_volume_min: str = ''
-        self.sku_quantity_min: str = ''
-        self.price: str = ''
-        self.promo_price: str = ''
-        self.status: int = 0
+        self.offers: list[Offer] = []
         self.country: str = ''
         self.categories: str = ''
         self.pictures: str = ''
@@ -93,32 +90,40 @@ class Product:
         soup = get_page_with_url(ZOO_URL + self.href)
         element = soup.find('div', {'id': 'comp_d68034d8231659a2cf5539cfbbbd3945'})
         self.price_datetime = datetime.now()
-        price_content = element.find('tr', 'b-catalog-element-offer')
-        items = [x for x in tags(price_content)]
-        # get article
-        self.sku_article = items[0].contents[3].contents[0] if item_is_valid(items, 0, 3) else ""
-        # logger.info(f'Артикул: {sku_article}')
-        # get barcode
-        self.sku_barcode = items[1].contents[3].contents[0] if item_is_valid(items, 1, 3) else ""
-        # logger.info(f'Штрих код: {sku_barcode}')
-        # if we already have this article or barcode - we skip this good
-        if self.sku_article in articles or self.sku_barcode in barcodes:
-            logger.error(f'we have saved item with article {self.sku_article} or barcode {self.sku_barcode}')
-            return
+        # оказывается в карточке есть несколько предложений » offers table
+        offers_soup = element.find('table', 'b-catalog-element-offers-table')
+        for offer in tags(offers_soup):
+            #
+            # price_content = element.find('tr', 'b-catalog-element-offer')
+            items = [x for x in tags(offer)]
+            # get article
+            sku_article = items[0].contents[3].contents[0] if item_is_valid(items, 0, 3) else ""
+            # logger.info(f'Артикул: {sku_article}')
+            # get barcode
+            sku_barcode = items[1].contents[3].contents[0] if item_is_valid(items, 1, 3) else ""
+            # logger.info(f'Штрих код: {sku_barcode}')
+            # if we already have this article or barcode - we skip this good
+            if sku_article in articles or sku_barcode in barcodes:
+                logger.error(f'we have saved item with article {sku_article} or barcode {sku_barcode}')
+                return
 
-        articles.append(self.sku_article)
-        barcodes.append(self.sku_barcode)
-        # get min volume, weight or quantity
-        self.min_value = items[2].contents[3].contents[0] if item_is_valid(items, 2, 3) else ""
-        self.sku_weight_min = get_weight(text=self.min_value)
-        self.sku_volume_min = get_volume(text=self.min_value)
-        self.sku_quantity_min = get_quantity(text=self.min_value)
-        # get price
-        self.price = items[4].contents[4].contents[0] if item_is_valid(items, 4, 4) else ""
-        # get promo price
-        self.promo_price = items[4].contents[7].contents[0] if item_is_valid(items, 4, 7) else ""
-        # get status
-        self.status = get_status(price_content)
+            articles.append(sku_article)
+            barcodes.append(sku_barcode)
+            # get min volume, weight or quantity
+            min_value = items[2].contents[3].contents[0] if item_is_valid(items, 2, 3) else ""
+            sku_weight_min = get_weight(text=min_value)
+            sku_volume_min = get_volume(text=min_value)
+            sku_quantity_min = get_quantity(text=min_value)
+            # get price
+            price = items[4].contents[4].contents[0] if item_is_valid(items, 4, 4) else ""
+            # get promo price
+            promo_price = items[4].contents[7].contents[0] if item_is_valid(items, 4, 7) else ""
+            # get status
+            status = get_status(offer)
+            # 'sku_article, sku_barcode, min_value, sku_weight_min, sku_volume_min, sku_quantity_min,'
+            # 'price, promo_price, status'
+            self.offers.append(Offer(sku_article, sku_barcode, min_value, sku_weight_min, sku_volume_min,
+                                     sku_quantity_min, price, promo_price, status))
         # get country
         country_wrapper = element.select_one('div.catalog-element-offer-left')
         self.country = get_country(country_wrapper)
@@ -129,14 +134,20 @@ class Product:
         pictures_wrapper = element.find_all('div', 'catalog-element-small-picture')
         self.pictures = get_pictures(pictures_wrapper)
         self.parsed = True
+        #
+        self.print_with_index(index)
+
+    def print_with_index(self, index: str):
         logger.info(f'{index} {self.first_line}')
-        logger.info(f'{" " * len(index)} {self.second_line}')
+        for offer in self.offers:
+            logger.info(f'{" " * len(index)} {self.second_line(offer)}')
 
     @property
     def to_csv(self):
-        return tuple([self.price_datetime, self.price, self.promo_price, self.status, self.sku_barcode,
-                      self.sku_article, self.title, self.categories, self.country, self.sku_weight_min,
-                      self.sku_volume_min, self.sku_quantity_min, self.href, self.pictures])
+        for offer in self.offers:
+            yield tuple([self.price_datetime, offer.price, offer.promo_price, offer.status, offer.sku_barcode,
+                         offer.sku_article, self.title, self.categories, self.country, offer.sku_weight_min,
+                         offer.sku_volume_min, offer.sku_quantity_min, self.href, self.pictures])
 
     def __str__(self):
         return f'{self.categories} | {self.title}\n' \
@@ -145,12 +156,12 @@ class Product:
 
     @property
     def first_line(self):
-        return f'{self.categories} | {self.title}'
+        return f'{self.categories} | {self.title} | country: {self.country}'
 
-    @property
-    def second_line(self):
-        return f'status: {self.status} | country: {self.country} | article: {self.sku_article} | ' \
-               f'barcode: {self.sku_barcode} | price: {self.price} | promo_price: {self.promo_price}'
+    @staticmethod
+    def second_line(offer: Offer):
+        return f'status: {offer.status} | article: {offer.sku_article} | ' \
+               f'barcode: {offer.sku_barcode} | price: {offer.price} | promo_price: {offer.promo_price}'
 
 
 def main():

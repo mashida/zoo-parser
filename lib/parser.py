@@ -199,7 +199,7 @@ class Parser:
             writer.writerow(goods_headers)
             for category in self.required_categories_list:
                 for product in self.products_list_by_category[category]:
-                    writer.writerow(product.to_csv)
+                    writer.writerows(product.to_csv)
 
     def work(self):
         for _ in range(self.restart['restart_count']):
