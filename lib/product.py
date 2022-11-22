@@ -147,12 +147,7 @@ class Product:
         for offer in self.offers:
             yield tuple([self.price_datetime, offer.price, offer.promo_price, offer.status, offer.sku_barcode,
                          offer.sku_article, self.title, self.categories, self.country, offer.sku_weight_min,
-                         offer.sku_volume_min, offer.sku_quantity_min, self.href, self.pictures])
-
-    def __str__(self):
-        return f'{self.categories} | {self.title}\n' \
-               f'status: {self.status} | country: {self.country} | article: {self.sku_article} | ' \
-               f'barcode: {self.sku_barcode} | price: {self.price} | promo_price: {self.promo_price}'
+                         offer.sku_volume_min, offer.sku_quantity_min, ZOO_URL + self.href, self.pictures])
 
     @property
     def first_line(self):
