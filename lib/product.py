@@ -115,9 +115,9 @@ class Product:
             sku_volume_min = get_volume(text=min_value)
             sku_quantity_min = get_quantity(text=min_value)
             # get price
-            price = items[4].contents[4].contents[0] if item_is_valid(items, 4, 4) else ""
+            price = items[4].contents[4].contents[0].strip(' р') if item_is_valid(items, 4, 4) else ""
             # get promo price
-            promo_price = items[4].contents[7].contents[0] if item_is_valid(items, 4, 7) else ""
+            promo_price = items[4].contents[7].contents[0].strip(' р') if item_is_valid(items, 4, 7) else ""
             # get status
             status = get_status(offer)
             # 'sku_article, sku_barcode, min_value, sku_weight_min, sku_volume_min, sku_quantity_min,'
