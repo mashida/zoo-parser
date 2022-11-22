@@ -175,7 +175,7 @@ class Parser:
         self.out_dir.mkdir(exist_ok=True)
         # write all categories
         with (self.out_dir / 'categories-all.csv').open('w', encoding='utf-8', newline='') as file:
-            writer = csv.writer(file, delimiter=',')
+            writer = csv.writer(file, delimiter=';')
             writer.writerow(headers)
             temp = [item for item in self.all_categories_parsed_tree.list_of_children()]
             for cat in temp:
@@ -183,7 +183,7 @@ class Parser:
         # write categories
 
         with (self.out_dir / 'categories.csv').open('w', encoding='utf-8', newline='') as file:
-            writer = csv.writer(file, delimiter=',')
+            writer = csv.writer(file, delimiter=';')
             writer.writerow(headers)
             for category in self.required_categories_parsed_list:
                 temp_list = [item for item in category.list_of_children()]
@@ -195,7 +195,7 @@ class Parser:
             'sku_category', 'sku_country', 'sku_weight_min', 'sku_volume_min', 'sku_quantity_min', 'sku_link',
             'sku_images')
         with (self.out_dir / 'goods.csv').open('w', encoding='utf-8', newline='') as file:
-            writer = csv.writer(file, delimiter=',')
+            writer = csv.writer(file, delimiter=';')
             writer.writerow(goods_headers)
             for category in self.required_categories_list:
                 for product in self.products_list_by_category[category]:
