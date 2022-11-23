@@ -1,20 +1,22 @@
 import sys
-
-from loguru import logger
 from datetime import datetime
 from pathlib import Path
 
-from lib.settings import Settings
+from loguru import logger
+
 from lib.parser import Parser
+from lib.settings import Settings
 
 
 def set_logging_file(parser: Parser):
     log_file_dir = Path(parser.logs_dir)
     log_file_dir.mkdir(exist_ok=True)
     logfile_name = log_file_dir / f'log-{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log'
+    logfile_error_name = log_file_dir / f'log-{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}-errors.log'
     logger.remove(0)
     logger.add(sink=sys.stdout, level='INFO', format='{message}')
     logger.add(sink=logfile_name, encoding='utf-8', level='INFO', format='{time:YYYY-MM-DD HH:mm:ss.SSS} » {message}')
+    logger.add(sink=logfile_error_name, encoding='utf-8', level='ERROR', format='{time:YYYY-MM-DD HH:mm:ss.SSS} » {message}')
 
 
 def main():
