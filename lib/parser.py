@@ -69,7 +69,6 @@ class Parser:
         }
         # list of all categories parsed
         self.category_parsed_tree: dict[str, Category] = {}
-        self.required_categories_parsed_list: list[Category] = []
         #
         self.apply_config(settings=settings)
 
@@ -134,7 +133,6 @@ class Parser:
                     f'on a first page of category: {catalog_url}')
 
     def parse_all_categories(self, category):
-        # logger.info('Parsing all categories..')
         if category in self.category_is_parsed.keys() and self.category_is_parsed[category]:
             logger.warning(f'  Category {category} have been parsed already. Skipping...')
             return
@@ -143,16 +141,6 @@ class Parser:
                                                        code=get_category_code_by_url(category),
                                                        stage=get_stage_out_of_url(category))
         self.category_is_parsed[category] = True
-        # logger.info('Done | all categories passed')
-
-    def parse_category_out_of_url(self, category_url: str):
-        index = self.required_categories_list.index(category_url) + 1
-        logger.info(f'    {index}/{len(self.required_categories_list)} Parsing {category_url} category out of url')
-        if self.required_categories_provided:
-            self.required_categories_parsed_list.append(
-                self.category_parsed_tree[category_url].get_by_link(link=category_url,
-                                                                    stage=get_stage_out_of_url(category_url)))
-        logger.info(f'    Done')
 
     @staticmethod
     def parse_block(item):
@@ -217,31 +205,11 @@ class Parser:
                 for product in self.products_list_by_category[category]:
                     writer.writerows(product.to_csv)
 
-    def work1(self):
-        for _ in range(self.restart['restart_count']):
-            try:
-
-                logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
-                for url in self.required_categories_list:
-                    logger.info(f'  Parsing {url} category')
-                    self.parse_all_categories(url)
-                    # self.parse_category_out_of_url(url)
-                    self.parse_cards(url)
-                    logger.info(f'  Done | Category {url} parsed')
-                break
-            except KeyboardInterrupt as e:
-                logger.error('Stopping by keyboard interruption.')
-                break
-            except BaseException as e:
-                logger.error(f'Error occurred: {e}')
-                sleep(self.restart['interval_m'] * 60)
-
     def work(self):
         logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
         for url in self.required_categories_list:
             logger.info(f'  Parsing {url} category')
             self.parse_all_categories(url)
-            # self.parse_category_out_of_url(url)
             self.parse_cards(url)
             logger.info(f'  Done | Category {url} parsed')
 

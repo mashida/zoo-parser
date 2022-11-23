@@ -98,15 +98,6 @@ class Category:
                                                    base_url=self.base_url, link=item['href'], code=item_code,
                                                    parent_id=self.code, soup=tag)
 
-    def get_by_link(self, link: str = None, stage: int = 0):
-        parts = link[1:-1].split('/')
-        # print(f'{len(parts)} : {parts}')
-        if link in self.children.keys():
-            return self.children[link]
-        else:
-            partial_link = f'/{"/".join(parts[0:stage + 1])}/'
-            return self.children[partial_link].get_by_link(link, stage + 1)
-
 
 if __name__ == "__main__":
     ZOO_URL = 'https://zootovary.ru'
@@ -120,7 +111,3 @@ if __name__ == "__main__":
         "/catalog/tovary-i-korma-dlya-sobak/korm-sukhoy/",
         "/catalog/tovary-i-korma-dlya-khorkov/korm/"
     ]
-    for link in links:
-        category1 = top.get_by_link(link, 1)
-        temp1 = category1.list_of_children()
-        print(f'total amount in {link} is {len(temp1)}')
