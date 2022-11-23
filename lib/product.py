@@ -89,6 +89,9 @@ class Product:
         # get the soup from link of the product
         soup = get_page_with_url(ZOO_URL + self.href)
         element = soup.find('div', {'id': 'comp_d68034d8231659a2cf5539cfbbbd3945'})
+        if element is None:
+            logger.error(f"we've got no data from {self.href}, skipping")
+            return
         self.price_datetime = datetime.now()
         # оказывается в карточке есть несколько предложений » offers table
         offers_soup = element.find('table', 'b-catalog-element-offers-table')
