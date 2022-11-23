@@ -1,22 +1,21 @@
-from loguru import logger
-
 import requests
 from bs4 import BeautifulSoup
+from loguru import logger
 
 from lib.helper import tags
 
 STAGES = {
     0: {'catalog':
-            {'tag': 'ul', 'class': 'catalog-menu-left-1'}, 'item': {'tag': 'a', 'class': 'item-depth-1'},
+        {'tag': 'ul', 'class': 'catalog-menu-left-1'}, 'item': {'tag': 'a', 'class': 'item-depth-1'},
         'multiplier': 1000000, 'indent': '', 'stop': False},
     1: {'catalog':
-            {'tag': 'ul', 'class': 'catalog-menu-left-1'}, 'item': {'tag': 'a', 'class': 'item-depth-1'},
+        {'tag': 'ul', 'class': 'catalog-menu-left-1'}, 'item': {'tag': 'a', 'class': 'item-depth-1'},
         'multiplier': 10000, 'indent': '\t', 'stop': False},
     2: {'catalog':
-            {'tag': 'ul', 'class': 'catalog-menu-left-2'}, 'item': {'tag': 'a', 'class': 'item-depth-2'},
+        {'tag': 'ul', 'class': 'catalog-menu-left-2'}, 'item': {'tag': 'a', 'class': 'item-depth-2'},
         'multiplier': 10, 'indent': '\t\t', 'stop': False},
     3: {'catalog':
-            {'tag': 'ul', 'class': 'catalog-menu-left-3'}, 'item': {'tag': 'a', 'class': 'item-depth-3'},
+        {'tag': 'ul', 'class': 'catalog-menu-left-3'}, 'item': {'tag': 'a', 'class': 'item-depth-3'},
         'multiplier': 1, 'indent': '\t\t\t', 'stop': False},
     4: {'indent': '\t\t\t\t', 'stop': True}
 }
@@ -83,7 +82,7 @@ class Category:
         # tovary-i-korma-dlya-sobak/korm-sukhoy/advance_1/shchenki_1/ - sub-category
         if STAGES[self.stage]['stop']:
             return
-        if self.stage in [0, 1]:
+        if self.stage in [0, 1] or self.soup is None:
             self.soup = get_page_with_url(self.base_url + self.link)
         catalog = self.soup.find(STAGES[self.stage]['catalog']['tag'], STAGES[self.stage]['catalog']['class'])
         index = 0

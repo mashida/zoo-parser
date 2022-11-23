@@ -9,7 +9,7 @@ from loguru import logger
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from lib.category import Category
+from lib.category import Category, STAGES
 from lib.helper import tags
 from lib.product import Product
 from lib.settings import Settings
@@ -18,14 +18,36 @@ ZOO_URL = 'https://zootovary.ru'
 CATALOG = '/catalog/'
 
 headers = ['name', 'id', 'parent_id', 'link']
+codes = {1: {}, 2: {}, 3: {}, 4: {}}
+
+
+def get_category_code_by_url(url: str) -> int:
+    stage = get_stage_out_of_url(url)
+    if stage == 0:
+        return 0
+    if url not in codes[stage].keys():
+        codes[stage][url] = len(codes[stage]) + 1
+
+    code = codes[stage][url] * STAGES[stage - 1]['multiplier'] + get_category_code_by_url(
+        get_less_one_level_of_link(url))
+    return code
+
+
+def get_stage_out_of_url(url: str) -> int:
+    parts = len(url[1:-1].split('/'))
+    return parts - 1
+
+
+def get_less_one_level_of_link(url):
+    parts = url[1:-1].split('/')
+    return '/' + '/'.join(parts[:-1]) + '/'
 
 
 class Parser:
     def __init__(self, settings: Settings):
         self.session = requests.Session()
         self.amount_of_pages: dict[str, int] = {}
-        self.categories_are_parsed: dict[str, bool] = {}
-        self.all_categories_are_parsed: bool = False
+        self.category_is_parsed: dict[str, bool] = {}
         # config parameters
         self.out_dir = Path('out')
         self.logs_dir = Path('logs')
@@ -46,7 +68,7 @@ class Parser:
             "interval_m": 0.2
         }
         # list of all categories parsed
-        self.all_categories_parsed_tree: Category = Category()
+        self.category_parsed_tree: dict[str, Category] = {}
         self.required_categories_parsed_list: list[Category] = []
         #
         self.apply_config(settings=settings)
@@ -111,23 +133,25 @@ class Parser:
         logger.info(f'        We found {self.amount_of_pages[catalog_url]} pages and {count_products} products '
                     f'on a first page of category: {catalog_url}')
 
-    def parse_all_categories(self):
-        logger.info('Parsing all categories..')
-        if self.all_categories_are_parsed:
-            logger.warning(f'Categories have been parsed already. Skipping...')
+    def parse_all_categories(self, category):
+        # logger.info('Parsing all categories..')
+        if category in self.category_is_parsed.keys() and self.category_is_parsed[category]:
+            logger.warning(f'  Category {category} have been parsed already. Skipping...')
             return
 
-        self.all_categories_parsed_tree = Category(url=ZOO_URL + CATALOG, base_url=ZOO_URL, link=CATALOG, code=0,
-                                                   stage=0)
-        self.all_categories_are_parsed = True
-        logger.info('Done | all categories passed')
+        self.category_parsed_tree[category] = Category(url=ZOO_URL + category, base_url=ZOO_URL, link=category,
+                                                       code=get_category_code_by_url(category),
+                                                       stage=get_stage_out_of_url(category))
+        self.category_is_parsed[category] = True
+        # logger.info('Done | all categories passed')
 
     def parse_category_out_of_url(self, category_url: str):
         index = self.required_categories_list.index(category_url) + 1
         logger.info(f'    {index}/{len(self.required_categories_list)} Parsing {category_url} category out of url')
         if self.required_categories_provided:
             self.required_categories_parsed_list.append(
-                self.all_categories_parsed_tree.get_by_link(link=category_url, stage=1))
+                self.category_parsed_tree[category_url].get_by_link(link=category_url,
+                                                                    stage=get_stage_out_of_url(category_url)))
         logger.info(f'    Done')
 
     @staticmethod
@@ -172,20 +196,12 @@ class Parser:
         self.parse_all_products_out_of_category(catalog_url=catalog_url)
 
     def csv_write(self):
-        self.out_dir.mkdir(exist_ok=True)
-        # write all categories
-        with (self.out_dir / 'categories-all.csv').open('w', encoding='utf-8', newline='') as file:
-            writer = csv.writer(file, delimiter=';')
-            writer.writerow(headers)
-            temp = [item for item in self.all_categories_parsed_tree.list_of_children()]
-            for cat in temp:
-                writer.writerow(cat)
         # write categories
 
         with (self.out_dir / 'categories.csv').open('w', encoding='utf-8', newline='') as file:
             writer = csv.writer(file, delimiter=';')
             writer.writerow(headers)
-            for category in self.required_categories_parsed_list:
+            for category in self.category_parsed_tree.values():
                 temp_list = [item for item in category.list_of_children()]
                 for cat in temp_list:
                     writer.writerow(cat)
@@ -201,14 +217,15 @@ class Parser:
                 for product in self.products_list_by_category[category]:
                     writer.writerows(product.to_csv)
 
-    def work(self):
+    def work1(self):
         for _ in range(self.restart['restart_count']):
             try:
-                self.parse_all_categories()
+
                 logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
                 for url in self.required_categories_list:
                     logger.info(f'  Parsing {url} category')
-                    self.parse_category_out_of_url(url)
+                    self.parse_all_categories(url)
+                    # self.parse_category_out_of_url(url)
                     self.parse_cards(url)
                     logger.info(f'  Done | Category {url} parsed')
                 break
@@ -219,4 +236,15 @@ class Parser:
                 logger.error(f'Error occurred: {e}')
                 sleep(self.restart['interval_m'] * 60)
 
+    def work(self):
+        logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
+        for url in self.required_categories_list:
+            logger.info(f'  Parsing {url} category')
+            self.parse_all_categories(url)
+            # self.parse_category_out_of_url(url)
+            self.parse_cards(url)
+            logger.info(f'  Done | Category {url} parsed')
 
+
+if __name__ == "__main__":
+    print(get_category_code_by_url("/catalog/tovary-i-korma-dlya-khorkov/aksessuary/"))
