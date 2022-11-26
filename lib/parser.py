@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 from requests.adapters import HTTPAdapter
+import tracemalloc
 from urllib3 import Retry
 
 from lib.category import Category, STAGES
@@ -172,16 +173,19 @@ class Parser:
                 continue
             index = f'{index}/{len(self.products_list_by_category[catalog_url])}'
             product.parse(articles=self.parsed_articles_list, barcodes=self.parsed_barcodes_list, index=index)
+            logger.info(tracemalloc.get_traced_memory())
         logger.info(f'        Done | Products from {catalog_url} have been parsed')
 
     def parse_cards(self, catalog_url):
         logger.info(f'      Parsing cards out of {catalog_url}')
+        tracemalloc.start()
         soup = self.get_soup_out_of_page_with_url(ZOO_URL + catalog_url, params={'pc': 50, 'v': 'filling'})
         self.calc_amount_of_pages(soup=soup, catalog_url=catalog_url)
         # let's get links of all products in this category
         self.get_all_products_links_out_of_category(catalog_url=catalog_url)
         # let's parse all products we have within this category
         self.parse_all_products_out_of_category(catalog_url=catalog_url)
+        tracemalloc.stop()
 
     def csv_write(self):
         # write categories
