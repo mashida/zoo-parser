@@ -75,7 +75,6 @@ class Category:
         return list_
 
     def add_children(self):
-        print(self)
         # now we'll look down to the category link in order to create its tree
         # each category consists of 4 elements: top-category, category, brand, sub-category
         # example
