@@ -1,10 +1,9 @@
 from collections import namedtuple
-
-from loguru import logger
 from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from loguru import logger
 
 from lib.helper import tags
 
@@ -74,6 +73,27 @@ def get_pictures(picture_wrapper) -> str:
     return ', '.join(links)
 
 
+class SmallProduct:
+    def __init__(self, price_datetime: str = None, price: str = None, price_promo: str = None, sku_status: str = None,
+                 sku_barcode: str = None, sku_article: str = None, sku_name: str = None, sku_category: str = None,
+                 sku_country: str = None, sku_weight_min: str = None, sku_volume_min: str = None,
+                 sku_quantity_min: str = None, sku_link: str = None, sku_images: str = None):
+        self.price_datetime: str = price_datetime
+        self.price: str = price
+        self.price_promo: str = price_promo
+        self.sku_status: str = sku_status
+        self.sku_barcode: str = sku_barcode
+        self.sku_article: str = sku_article
+        self.sku_name: str = sku_name
+        self.sku_category: str = sku_category
+        self.sku_country: str = sku_country
+        self.sku_weight_min: str = sku_weight_min
+        self.sku_volume_min: str = sku_volume_min
+        self.sku_quantity_min: str = sku_quantity_min
+        self.sku_link: str = sku_link
+        self.sku_images: str = sku_images
+
+
 class Product:
     def __init__(self, href: str = None, title: str = None, parsed: bool = False):
         self.href = href
@@ -139,6 +159,7 @@ class Product:
         self.parsed = True
         #
         self.print_with_index(index)
+        soup.decompose()
 
     def print_with_index(self, index: str):
         logger.info(f'{index} {self.first_line}')
