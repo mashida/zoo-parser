@@ -75,6 +75,7 @@ class Category:
         return list_
 
     def add_children(self):
+        print(self)
         # now we'll look down to the category link in order to create its tree
         # each category consists of 4 elements: top-category, category, brand, sub-category
         # example
@@ -99,7 +100,8 @@ class Category:
                                                    url=self.base_url + item['href'],
                                                    base_url=self.base_url, link=item['href'], code=item_code,
                                                    parent_id=self.code, soup=tag)
-        self.soup.decompose()
+        if self.stage in [0, 1]:
+            self.soup.decompose()
 
 
 if __name__ == "__main__":
