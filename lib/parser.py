@@ -1,4 +1,5 @@
 import csv
+import concurrent.futures
 from pathlib import Path
 from random import uniform
 from time import sleep
@@ -17,6 +18,7 @@ from lib.settings import Settings
 
 ZOO_URL = 'https://zootovary.ru'
 CATALOG = '/catalog/'
+MAX_THREADS = 20
 
 headers = ['name', 'id', 'parent_id', 'link']
 codes = {1: {}, 2: {}, 3: {}, 4: {}}
@@ -163,6 +165,7 @@ class Parser:
                 if catalog_url not in self.products_list_by_category.keys():
                     self.products_list_by_category[catalog_url] = []
                 self.products_list_by_category[catalog_url].append(product)
+            soup.decompose()
         logger.info(f'        We have found {len(self.products_list_by_category[catalog_url])} products to parse')
 
     def parse_all_products_out_of_category(self, catalog_url: str = None):
@@ -211,6 +214,7 @@ class Parser:
 
     def work(self):
         logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
+
         for url in self.required_categories_list:
             logger.info(f'  Parsing {url} category')
             self.parse_all_categories(url)
