@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
+from time import sleep
 
 from lib.helper import tags
 
@@ -26,6 +27,7 @@ def get_page_with_url(url: str):
     params = {'pc': 50, 'v': 'filling'}
     # sleep(uniform(self.delay_range[0], self.delay_range[1]))
     result = requests.get(url, params=params)
+    sleep(0.25)
     return BeautifulSoup(result.text, 'lxml')
 
 
@@ -97,6 +99,7 @@ class Category:
                                                    url=self.base_url + item['href'],
                                                    base_url=self.base_url, link=item['href'], code=item_code,
                                                    parent_id=self.code, soup=tag)
+        self.soup.decompose()
 
 
 if __name__ == "__main__":
