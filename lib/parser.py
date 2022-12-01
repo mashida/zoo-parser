@@ -26,7 +26,7 @@ codes = {1: {}, 2: {}, 3: {}, 4: {}}
 
 def get_category_code_by_url(url: str) -> int:
     stage = get_stage_out_of_url(url)
-    if stage == 0:
+    if stage == 0 or stage > 4:
         return 0
     if url not in codes[stage].keys():
         codes[stage][url] = len(codes[stage]) + 1
@@ -104,6 +104,7 @@ class Parser:
         sleep(uniform(self.delay_range[0], self.delay_range[1]))
         # get soup out of page
         result = self.session.get(url, params=params)
+        result.encoding = 'utf-8'
         return BeautifulSoup(result.text, 'lxml')
 
     def calc_amount_of_pages(self, soup, catalog_url: str = "") -> None:
@@ -219,6 +220,15 @@ class Parser:
             logger.info(f'  Parsing {url} category')
             self.parse_all_categories(url)
             self.parse_cards(url)
+            logger.info(f'  Done | Category {url} parsed')
+
+    def work_part(self):
+        logger.info(f'We have {len(self.required_categories_list)} categories to parse..')
+
+        for url in self.required_categories_list:
+            logger.info(f'  Parsing {url} category')
+            self.parse_all_categories(url)
+            # self.parse_cards(url)
             logger.info(f'  Done | Category {url} parsed')
 
 

@@ -16,7 +16,8 @@ def set_logging_file(parser: Parser):
     logger.remove(0)
     logger.add(sink=sys.stdout, level='INFO', format='{message}')
     logger.add(sink=logfile_name, encoding='utf-8', level='INFO', format='{time:YYYY-MM-DD HH:mm:ss.SSS} » {message}')
-    logger.add(sink=logfile_error_name, encoding='utf-8', level='ERROR', format='{time:YYYY-MM-DD HH:mm:ss.SSS} » {message}')
+    logger.add(sink=logfile_error_name, encoding='utf-8', level='ERROR',
+               format='{time:YYYY-MM-DD HH:mm:ss.SSS} » {message}')
 
 
 def main():
@@ -24,8 +25,8 @@ def main():
     parser = Parser(settings=settings)
     set_logging_file(parser=parser)
     parser.setup_session()
-    parser.work()
-    parser.csv_write()
+    # parser.work_part()
+    # parser.csv_write()
 
 
 if __name__ == "__main__":
